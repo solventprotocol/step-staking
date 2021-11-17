@@ -29,23 +29,23 @@ pub mod step_staking {
     use super::*;
 
     pub fn initialize(
-        _ctx: Context<Initialize>,
+        ctx: Context<Initialize>,
         _nonce_vault: u8,
         _nonce_staking: u8,
-        _lock_end_date: u64,
+        lock_end_date: u64,
     ) -> ProgramResult {
-        _ctx.accounts.staking_account.initializer_key = *_ctx.accounts.initializer.key;
-        _ctx.accounts.staking_account.lock_end_date = _lock_end_date;
+        ctx.accounts.staking_account.initializer_key = *ctx.accounts.initializer.key;
+        ctx.accounts.staking_account.lock_end_date = lock_end_date;
 
         Ok(())
     }
 
     pub fn update_lock_end_date(
-        _ctx: Context<UpdateLockEndDate>,
+        ctx: Context<UpdateLockEndDate>,
         _nonce_staking: u8,
-        _lock_end_date: u64,
+        lock_end_date: u64,
     ) -> ProgramResult {
-        _ctx.accounts.staking_account.lock_end_date = _lock_end_date;
+        ctx.accounts.staking_account.lock_end_date = lock_end_date;
 
         Ok(())
     }
@@ -145,7 +145,12 @@ pub mod step_staking {
         Ok(())
     }
 
-    pub fn unstake(ctx: Context<Unstake>, nonce: u8, amount: u64) -> ProgramResult {
+    pub fn unstake(
+        ctx: Context<Unstake>,
+        nonce_vault: u8,
+        _nonce_staking: u8,
+        amount: u64,
+    ) -> ProgramResult {
         let now_ts = Clock::get().unwrap().unix_timestamp;
         let lock_end_date = ctx.accounts.staking_account.lock_end_date;
 
@@ -179,7 +184,7 @@ pub mod step_staking {
 
         //compute vault signer seeds
         let token_mint_key = ctx.accounts.token_mint.key();
-        let seeds = &[token_mint_key.as_ref(), &[nonce]];
+        let seeds = &[token_mint_key.as_ref(), &[nonce_vault]];
         let signer = &[&seeds[..]];
 
         //transfer from vault to user
