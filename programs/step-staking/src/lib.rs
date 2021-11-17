@@ -14,26 +14,46 @@ declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
 pub mod constants {
     pub const STEP_TOKEN_MINT_PUBKEY: &str = "StepAscQoEioFxxWGnh2sLBDFp9d8rvKz2Yp39iDpyT";
     pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "xStpgUCss9piqeFUk2iLVcvJEGhAdJxJQuwLkXP555G";
+    pub const STAKING_PDA_SEED: &[u8] = b"staking";
 }
 
 #[cfg(feature = "local-testing")]
 pub mod constants {
     pub const STEP_TOKEN_MINT_PUBKEY: &str = "teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9";
     pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "TestZ4qmw6fCo1uK9oJbobWDgj1sME6hR1ssWQnyjxM";
+    pub const STAKING_PDA_SEED: &[u8] = b"staking";
 }
 
 #[program]
 pub mod step_staking {
     use super::*;
 
-    pub fn initialize(_ctx: Context<Initialize>, _nonce: u8) -> ProgramResult {
+    pub fn initialize(
+        _ctx: Context<Initialize>,
+        _nonce_vault: u8,
+        _nonce_staking: u8,
+        _lock_end_date: u64,
+    ) -> ProgramResult {
+        _ctx.accounts.staking_account.initializer_key = *_ctx.accounts.initializer.key;
+        _ctx.accounts.staking_account.lock_end_date = _lock_end_date;
+
+        Ok(())
+    }
+
+    pub fn update_lock_end_date(
+        _ctx: Context<UpdateLockEndDate>,
+        _nonce_staking: u8,
+        _lock_end_date: u64,
+    ) -> ProgramResult {
+        _ctx.accounts.staking_account.lock_end_date = _lock_end_date;
+
         Ok(())
     }
 
     /// Set the mint authority of xSTEP to the mint authority of the STEP token
     /// This would be used for some rescue type operation, or deprecation of this program
     /// After calling this operation with the correct keys (signed by the STEP mint auth)
-    /// This program would no longer function unless the mint authority were set 
+    /// This program would no longer function unless the mint authority were set
     /// back to ANYxxG365hutGYaTdtUQG8u2hC4dFX9mFHKuzy9ABQJi
     pub fn reclaim_mint_authority(ctx: Context<ReclaimMintAuthority>, nonce: u8) -> ProgramResult {
         let token_mint_key = ctx.accounts.token_mint.key();
@@ -49,8 +69,8 @@ pub mod step_staking {
             &signer,
         );
         token::set_authority(
-            cpi_ctx, 
-            AuthorityType::MintTokens, 
+            cpi_ctx,
+            AuthorityType::MintTokens,
             Some(ctx.accounts.token_mint.mint_authority.unwrap()),
         )?;
         Ok(())
@@ -126,6 +146,13 @@ pub mod step_staking {
     }
 
     pub fn unstake(ctx: Context<Unstake>, nonce: u8, amount: u64) -> ProgramResult {
+        let now_ts = Clock::get().unwrap().unix_timestamp;
+        let lock_end_date = ctx.accounts.staking_account.lock_end_date;
+
+        if (now_ts as u64) < lock_end_date {
+            return Err(ErrorCode::NotExceedLockEndDate.into());
+        }
+
         let total_token = ctx.accounts.token_vault.amount;
         let total_x_token = ctx.accounts.x_token_mint.supply;
         let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
@@ -217,7 +244,7 @@ pub fn get_price<'info>(
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce: u8)]
+#[instruction(_nonce_vault: u8, _nonce_staking: u8, _lock_end_date: u64)]
 pub struct Initialize<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -230,10 +257,18 @@ pub struct Initialize<'info> {
         token::mint = token_mint,
         token::authority = token_vault, //the PDA address is both the vault account and the authority (and event the mint authority)
         seeds = [ constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap().as_ref() ],
-        bump = _nonce,
+        bump = _nonce_vault,
     )]
     ///the not-yet-created, derived token vault pubkey
     pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        init,
+        payer = initializer,
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = _nonce_staking,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
 
     #[account(mut)]
     ///pays rent on the initializing accounts
@@ -277,6 +312,20 @@ pub struct ReclaimMintAuthority<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(nonce_staking: u8)]
+pub struct UpdateLockEndDate<'info> {
+    pub initializer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = nonce_staking,
+        constraint = staking_account.initializer_key == *initializer.key,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
+}
+
+#[derive(Accounts)]
 #[instruction(nonce: u8)]
 pub struct Stake<'info> {
     #[account(
@@ -312,7 +361,7 @@ pub struct Stake<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
+#[instruction(nonce_vault: u8, nonce_staking: u8)]
 pub struct Unstake<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -335,9 +384,15 @@ pub struct Unstake<'info> {
     #[account(
         mut,
         seeds = [ token_mint.key().as_ref() ],
-        bump = nonce,
+        bump = nonce_vault,
     )]
     pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = nonce_staking,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
 
     #[account(mut)]
     //the token account to send token
@@ -367,6 +422,13 @@ pub struct EmitPrice<'info> {
     pub token_vault: Box<Account<'info, TokenAccount>>,
 }
 
+#[account]
+#[derive(Default)]
+pub struct StakingAccount {
+    pub initializer_key: Pubkey,
+    pub lock_end_date: u64,
+}
+
 #[event]
 pub struct PriceChange {
     pub old_step_per_xstep_e9: u64,
@@ -379,4 +441,10 @@ pub struct PriceChange {
 pub struct Price {
     pub step_per_xstep_e9: u64,
     pub step_per_xstep: String,
+}
+
+#[error]
+pub enum ErrorCode {
+    #[msg("Not exceed lock end date")]
+    NotExceedLockEndDate,
 }
