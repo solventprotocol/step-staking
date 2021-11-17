@@ -317,14 +317,14 @@ pub struct ReclaimMintAuthority<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce_staking: u8)]
+#[instruction(_nonce_staking: u8, lock_end_date: u64)]
 pub struct UpdateLockEndDate<'info> {
     pub initializer: Signer<'info>,
 
     #[account(
         mut,
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
-        bump = nonce_staking,
+        bump = _nonce_staking,
         constraint = staking_account.initializer_key == *initializer.key,
     )]
     pub staking_account: ProgramAccount<'info, StakingAccount>,
