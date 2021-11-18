@@ -371,7 +371,6 @@ pub struct Stake<'info> {
         payer = token_from_authority,
         seeds = [ token_from_authority.key().as_ref() ],
         bump = _nonce_user_staking,
-        space = 8 + UserStakingAccount::default().try_to_vec().unwrap().len(),
     )]
     pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
 
