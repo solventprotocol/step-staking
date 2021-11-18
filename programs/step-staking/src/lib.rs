@@ -76,13 +76,18 @@ pub mod step_staking {
         Ok(())
     }
 
-    pub fn stake(ctx: Context<Stake>, nonce: u8, amount: u64) -> ProgramResult {
+    pub fn stake(
+        ctx: Context<Stake>,
+        nonce_vault: u8,
+        _nonce_user_staking: u8,
+        amount: u64,
+    ) -> ProgramResult {
         let total_token = ctx.accounts.token_vault.amount;
         let total_x_token = ctx.accounts.x_token_mint.supply;
         let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
 
         let token_mint_key = ctx.accounts.token_mint.key();
-        let seeds = &[token_mint_key.as_ref(), &[nonce]];
+        let seeds = &[token_mint_key.as_ref(), &[nonce_vault]];
         let signer = [&seeds[..]];
 
         //mint x tokens
@@ -132,6 +137,9 @@ pub mod step_staking {
 
         (&mut ctx.accounts.token_vault).reload()?;
         (&mut ctx.accounts.x_token_mint).reload()?;
+
+        //plus user staking amount
+        ctx.accounts.user_staking_account.amount += amount;
 
         let new_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
 
@@ -249,7 +257,7 @@ pub fn get_price<'info>(
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce_vault: u8, _nonce_staking: u8, _lock_end_date: u64)]
+#[instruction(_nonce_vault: u8, _nonce_staking: u8)]
 pub struct Initialize<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -317,7 +325,7 @@ pub struct ReclaimMintAuthority<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce_staking: u8, lock_end_date: u64)]
+#[instruction(_nonce_staking: u8)]
 pub struct UpdateLockEndDate<'info> {
     pub initializer: Signer<'info>,
 
@@ -331,7 +339,7 @@ pub struct UpdateLockEndDate<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
+#[instruction(nonce_vault: u8, _nonce_user_staking: u8)]
 pub struct Stake<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -354,15 +362,26 @@ pub struct Stake<'info> {
     #[account(
         mut,
         seeds = [ token_mint.key().as_ref() ],
-        bump = nonce,
+        bump = nonce_vault,
     )]
     pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        init_if_needed,
+        payer = token_from_authority,
+        seeds = [ token_from_authority.key().as_ref() ],
+        bump = _nonce_user_staking,
+        space = 8 + UserStakingAccount::default().try_to_vec().unwrap().len(),
+    )]
+    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
 
     #[account(mut)]
     //the token account to send xtoken
     pub x_token_to: Box<Account<'info, TokenAccount>>,
 
+    pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -432,6 +451,12 @@ pub struct EmitPrice<'info> {
 pub struct StakingAccount {
     pub initializer_key: Pubkey,
     pub lock_end_date: u64,
+}
+
+#[account]
+#[derive(Default)]
+pub struct UserStakingAccount {
+    pub amount: u64,
 }
 
 #[event]
