@@ -2,7 +2,6 @@
 /// https://github.com/sushiswap/sushiswap/blob/master/contracts/SushiBar.sol
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-use spl_token::instruction::AuthorityType;
 use std::convert::TryInto;
 
 #[cfg(not(feature = "local-testing"))]
@@ -13,14 +12,12 @@ declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
 #[cfg(not(feature = "local-testing"))]
 pub mod constants {
     pub const STEP_TOKEN_MINT_PUBKEY: &str = "StepAscQoEioFxxWGnh2sLBDFp9d8rvKz2Yp39iDpyT";
-    pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "xStpgUCss9piqeFUk2iLVcvJEGhAdJxJQuwLkXP555G";
     pub const STAKING_PDA_SEED: &[u8] = b"staking";
 }
 
 #[cfg(feature = "local-testing")]
 pub mod constants {
     pub const STEP_TOKEN_MINT_PUBKEY: &str = "teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9";
-    pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "TestZ4qmw6fCo1uK9oJbobWDgj1sME6hR1ssWQnyjxM";
     pub const STAKING_PDA_SEED: &[u8] = b"staking";
 }
 
@@ -43,66 +40,38 @@ pub mod step_staking {
     pub fn update_lock_end_date(
         ctx: Context<UpdateLockEndDate>,
         _nonce_staking: u8,
-        lock_end_date: u64,
+        new_lock_end_date: u64,
     ) -> ProgramResult {
-        ctx.accounts.staking_account.lock_end_date = lock_end_date;
+        ctx.accounts.staking_account.lock_end_date = new_lock_end_date;
 
-        Ok(())
-    }
-
-    /// Set the mint authority of xSTEP to the mint authority of the STEP token
-    /// This would be used for some rescue type operation, or deprecation of this program
-    /// After calling this operation with the correct keys (signed by the STEP mint auth)
-    /// This program would no longer function unless the mint authority were set
-    /// back to ANYxxG365hutGYaTdtUQG8u2hC4dFX9mFHKuzy9ABQJi
-    pub fn reclaim_mint_authority(ctx: Context<ReclaimMintAuthority>, nonce: u8) -> ProgramResult {
-        let token_mint_key = ctx.accounts.token_mint.key();
-        let seeds = &[token_mint_key.as_ref(), &[nonce]];
-        let signer = [&seeds[..]];
-
-        let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            token::SetAuthority {
-                current_authority: ctx.accounts.token_vault.to_account_info(),
-                account_or_mint: ctx.accounts.x_token_mint.to_account_info(),
-            },
-            &signer,
-        );
-        token::set_authority(
-            cpi_ctx,
-            AuthorityType::MintTokens,
-            Some(ctx.accounts.token_mint.mint_authority.unwrap()),
-        )?;
         Ok(())
     }
 
     pub fn stake(
         ctx: Context<Stake>,
-        nonce_vault: u8,
+        _nonce_vault: u8,
+        _nonce_staking: u8,
         _nonce_user_staking: u8,
         amount: u64,
     ) -> ProgramResult {
         let total_token = ctx.accounts.token_vault.amount;
-        let total_x_token = ctx.accounts.x_token_mint.supply;
-        let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
-
-        let token_mint_key = ctx.accounts.token_mint.key();
-        let seeds = &[token_mint_key.as_ref(), &[nonce_vault]];
-        let signer = [&seeds[..]];
+        let total_x_token = ctx.accounts.staking_account.total_x_token;
+        let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
 
         //mint x tokens
         if total_token == 0 || total_x_token == 0 {
-            //no math reqd, we mint them the amount they sent us
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                token::MintTo {
-                    mint: ctx.accounts.x_token_mint.to_account_info(),
-                    to: ctx.accounts.x_token_to.to_account_info(),
-                    authority: ctx.accounts.token_vault.to_account_info(),
-                },
-                &signer,
-            );
-            token::mint_to(cpi_ctx, amount)?;
+            ctx.accounts.staking_account.total_x_token =
+                (ctx.accounts.staking_account.total_x_token as u128)
+                    .checked_add(amount as u128)
+                    .unwrap()
+                    .try_into()
+                    .unwrap();
+            ctx.accounts.user_staking_account.x_token_amount =
+                (ctx.accounts.user_staking_account.x_token_amount as u128)
+                    .checked_add(amount as u128)
+                    .unwrap()
+                    .try_into()
+                    .unwrap();
         } else {
             let what: u64 = (amount as u128)
                 .checked_mul(total_x_token as u128)
@@ -112,16 +81,18 @@ pub mod step_staking {
                 .try_into()
                 .unwrap();
 
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                token::MintTo {
-                    mint: ctx.accounts.x_token_mint.to_account_info(),
-                    to: ctx.accounts.x_token_to.to_account_info(),
-                    authority: ctx.accounts.token_vault.to_account_info(),
-                },
-                &signer,
-            );
-            token::mint_to(cpi_ctx, what)?;
+            ctx.accounts.staking_account.total_x_token =
+                (ctx.accounts.staking_account.total_x_token as u128)
+                    .checked_add(what as u128)
+                    .unwrap()
+                    .try_into()
+                    .unwrap();
+            ctx.accounts.user_staking_account.x_token_amount =
+                (ctx.accounts.user_staking_account.x_token_amount as u128)
+                    .checked_add(what as u128)
+                    .unwrap()
+                    .try_into()
+                    .unwrap();
         }
 
         //transfer the users tokens to the vault
@@ -136,12 +107,16 @@ pub mod step_staking {
         token::transfer(cpi_ctx, amount)?;
 
         (&mut ctx.accounts.token_vault).reload()?;
-        (&mut ctx.accounts.x_token_mint).reload()?;
 
         //plus user staking amount
-        ctx.accounts.user_staking_account.amount += amount;
+        ctx.accounts.user_staking_account.amount = (ctx.accounts.user_staking_account.amount
+            as u128)
+            .checked_add(amount as u128)
+            .unwrap()
+            .try_into()
+            .unwrap();
 
-        let new_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
+        let new_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
 
         emit!(PriceChange {
             old_step_per_xstep_e9: old_price.0,
@@ -157,6 +132,7 @@ pub mod step_staking {
         ctx: Context<Unstake>,
         nonce_vault: u8,
         _nonce_staking: u8,
+        _nonce_user_staking: u8,
         amount: u64,
     ) -> ProgramResult {
         let now_ts = Clock::get().unwrap().unix_timestamp;
@@ -167,19 +143,22 @@ pub mod step_staking {
         }
 
         let total_token = ctx.accounts.token_vault.amount;
-        let total_x_token = ctx.accounts.x_token_mint.supply;
-        let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
+        let total_x_token = ctx.accounts.staking_account.total_x_token;
+        let old_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
 
         //burn what is being sent
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            token::Burn {
-                mint: ctx.accounts.x_token_mint.to_account_info(),
-                to: ctx.accounts.x_token_from.to_account_info(),
-                authority: ctx.accounts.x_token_from_authority.to_account_info(),
-            },
-        );
-        token::burn(cpi_ctx, amount)?;
+        ctx.accounts.staking_account.total_x_token = (ctx.accounts.staking_account.total_x_token
+            as u128)
+            .checked_sub(amount as u128)
+            .unwrap()
+            .try_into()
+            .unwrap();
+        ctx.accounts.user_staking_account.x_token_amount =
+            (ctx.accounts.user_staking_account.x_token_amount as u128)
+                .checked_sub(amount as u128)
+                .unwrap()
+                .try_into()
+                .unwrap();
 
         //determine user share of vault
         let what: u64 = (amount as u128)
@@ -208,9 +187,28 @@ pub mod step_staking {
         token::transfer(cpi_ctx, what)?;
 
         (&mut ctx.accounts.token_vault).reload()?;
-        (&mut ctx.accounts.x_token_mint).reload()?;
 
-        let new_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
+        //determine user staking amount
+        let new_total_token = ctx.accounts.token_vault.amount;
+        let new_total_x_token = ctx.accounts.staking_account.total_x_token;
+
+        if new_total_token == 0 || new_total_x_token == 0 {
+            ctx.accounts.user_staking_account.amount = 0;
+        } else {
+            let new_what: u64 = (ctx.accounts.user_staking_account.x_token_amount as u128)
+                .checked_mul(new_total_token as u128)
+                .unwrap()
+                .checked_div(new_total_x_token as u128)
+                .unwrap()
+                .try_into()
+                .unwrap();
+
+            if new_what < ctx.accounts.user_staking_account.amount {
+                ctx.accounts.user_staking_account.amount = new_what;
+            }
+        }
+
+        let new_price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
 
         emit!(PriceChange {
             old_step_per_xstep_e9: old_price.0,
@@ -222,8 +220,8 @@ pub mod step_staking {
         Ok(())
     }
 
-    pub fn emit_price(ctx: Context<EmitPrice>) -> ProgramResult {
-        let price = get_price(&ctx.accounts.token_vault, &ctx.accounts.x_token_mint);
+    pub fn emit_price(ctx: Context<EmitPrice>, _nonce_staking: u8) -> ProgramResult {
+        let price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
         emit!(Price {
             step_per_xstep_e9: price.0,
             step_per_xstep: price.1,
@@ -236,10 +234,10 @@ const E9: u128 = 1000000000;
 
 pub fn get_price<'info>(
     vault: &Account<'info, TokenAccount>,
-    mint: &Account<'info, Mint>,
+    staking: &ProgramAccount<'info, StakingAccount>,
 ) -> (u64, String) {
     let total_token = vault.amount;
-    let total_x_token = mint.supply;
+    let total_x_token = staking.total_x_token;
 
     if total_x_token == 0 {
         return (0, String::from("0"));
@@ -294,37 +292,6 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
-pub struct ReclaimMintAuthority<'info> {
-    #[account(
-        address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-    )]
-    pub token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
-        address = constants::X_STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-    )]
-    pub x_token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
-        seeds = [ token_mint.key().as_ref() ],
-        bump = nonce,
-    )]
-    pub token_vault: Box<Account<'info, TokenAccount>>,
-
-    #[account(
-        mut,
-        //only STEP's token authority can sign for this action
-        address = token_mint.mint_authority.unwrap(),
-    )]
-    ///the mint authority of the step token
-    pub authority: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
 #[instruction(_nonce_staking: u8)]
 pub struct UpdateLockEndDate<'info> {
     pub initializer: Signer<'info>,
@@ -339,18 +306,12 @@ pub struct UpdateLockEndDate<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce_vault: u8, _nonce_user_staking: u8)]
+#[instruction(_nonce_vault: u8, _nonce_staking: u8, _nonce_user_staking: u8)]
 pub struct Stake<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
     )]
     pub token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
-        address = constants::X_STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-    )]
-    pub x_token_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     //the token account to withdraw from
@@ -362,9 +323,16 @@ pub struct Stake<'info> {
     #[account(
         mut,
         seeds = [ token_mint.key().as_ref() ],
-        bump = nonce_vault,
+        bump = _nonce_vault,
     )]
     pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = _nonce_staking,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
 
     #[account(
         init_if_needed,
@@ -374,32 +342,18 @@ pub struct Stake<'info> {
     )]
     pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
 
-    #[account(mut)]
-    //the token account to send xtoken
-    pub x_token_to: Box<Account<'info, TokenAccount>>,
-
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-#[instruction(nonce_vault: u8, nonce_staking: u8)]
+#[instruction(nonce_vault: u8, _nonce_staking: u8, _nonce_user_staking: u8, amount: u64)]
 pub struct Unstake<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
     )]
     pub token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
-        address = constants::X_STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-    )]
-    pub x_token_mint: Box<Account<'info, Mint>>,
-
-    #[account(mut)]
-    //the token account to withdraw from
-    pub x_token_from: Box<Account<'info, TokenAccount>>,
 
     //the authority allowed to transfer from x_token_from
     pub x_token_from_authority: Signer<'info>,
@@ -412,10 +366,19 @@ pub struct Unstake<'info> {
     pub token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
-        bump = nonce_staking,
+        bump = _nonce_staking,
     )]
     pub staking_account: ProgramAccount<'info, StakingAccount>,
+
+    #[account(
+        mut,
+        seeds = [ x_token_from_authority.key().as_ref() ],
+        bump = _nonce_user_staking,
+        constraint = user_staking_account.x_token_amount >= amount
+    )]
+    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
 
     #[account(mut)]
     //the token account to send token
@@ -425,6 +388,7 @@ pub struct Unstake<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(_nonce_staking: u8)]
 pub struct EmitPrice<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -433,16 +397,16 @@ pub struct EmitPrice<'info> {
 
     #[account(
         mut,
-        address = constants::X_STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-    )]
-    pub x_token_mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        mut,
         seeds = [ token_mint.key().as_ref() ],
         bump,
     )]
     pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = _nonce_staking,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
 }
 
 #[account]
@@ -450,12 +414,14 @@ pub struct EmitPrice<'info> {
 pub struct StakingAccount {
     pub initializer_key: Pubkey,
     pub lock_end_date: u64,
+    pub total_x_token: u64,
 }
 
 #[account]
 #[derive(Default)]
 pub struct UserStakingAccount {
     pub amount: u64,
+    pub x_token_amount: u64,
 }
 
 #[event]
