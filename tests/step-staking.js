@@ -367,6 +367,75 @@ describe('step-staking', () => {
     assert.strictEqual(parseInt(userStakingAccount.amount), 0);
     assert.strictEqual(parseInt(userStakingAccount.xTokenAmount), 0);
   });
+
+  it('Freeze program for staking/unstaking', async () => {
+    await program.rpc.freezeProgram(stakingBump, {
+      accounts: {
+        initializer: provider.wallet.publicKey,
+        stakingAccount: stakingPubkey,
+      },
+    });
+
+    let stakingAccount = await program.account.stakingAccount.fetch(
+      stakingPubkey
+    );
+
+    assert.strictEqual(stakingAccount.freezeProgram, true);
+
+    await assert.rejects(
+      async () => {
+        await program.rpc.stake(
+          vaultBump,
+          stakingBump,
+          userStakingBump,
+          new anchor.BN(5_000_000_000),
+          {
+            accounts: {
+              tokenMint: mintPubkey,
+              tokenFrom: walletTokenAccount,
+              tokenFromAuthority: provider.wallet.publicKey,
+              tokenVault: vaultPubkey,
+              stakingAccount: stakingPubkey,
+              userStakingAccount: userStakingPubkey,
+              systemProgram: anchor.web3.SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            },
+          }
+        );
+      },
+      (err) => {
+        assert.strictEqual(err.code, 143);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      async () => {
+        await program.rpc.unstake(
+          vaultBump,
+          stakingBump,
+          userStakingBump,
+          new anchor.BN(5_000_000_000),
+          {
+            accounts: {
+              tokenMint: mintPubkey,
+              xTokenFromAuthority: provider.wallet.publicKey,
+              tokenVault: vaultPubkey,
+              stakingAccount: stakingPubkey,
+              userStakingAccount: userStakingPubkey,
+              tokenTo: walletTokenAccount,
+              tokenProgram: TOKEN_PROGRAM_ID,
+            },
+          }
+        );
+      },
+      (err) => {
+        assert.strictEqual(err.code, 143);
+        return true;
+      }
+    );
+  });
 });
 
 async function getTokenBalance(pubkey) {

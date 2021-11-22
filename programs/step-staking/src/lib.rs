@@ -47,6 +47,12 @@ pub mod step_staking {
         Ok(())
     }
 
+    pub fn freeze_program(ctx: Context<FreezeProgram>, _nonce_staking: u8) -> ProgramResult {
+        ctx.accounts.staking_account.freeze_program = !ctx.accounts.staking_account.freeze_program;
+
+        Ok(())
+    }
+
     pub fn stake(
         ctx: Context<Stake>,
         _nonce_vault: u8,
@@ -306,6 +312,20 @@ pub struct UpdateLockEndDate<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(_nonce_staking: u8)]
+pub struct FreezeProgram<'info> {
+    pub initializer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump = _nonce_staking,
+        constraint = staking_account.initializer_key == *initializer.key,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
+}
+
+#[derive(Accounts)]
 #[instruction(_nonce_vault: u8, _nonce_staking: u8, _nonce_user_staking: u8)]
 pub struct Stake<'info> {
     #[account(
@@ -331,6 +351,7 @@ pub struct Stake<'info> {
         mut,
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
         bump = _nonce_staking,
+        constraint = !staking_account.freeze_program,
     )]
     pub staking_account: ProgramAccount<'info, StakingAccount>,
 
@@ -369,6 +390,7 @@ pub struct Unstake<'info> {
         mut,
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
         bump = _nonce_staking,
+        constraint = !staking_account.freeze_program,
     )]
     pub staking_account: ProgramAccount<'info, StakingAccount>,
 
@@ -415,6 +437,7 @@ pub struct StakingAccount {
     pub initializer_key: Pubkey,
     pub lock_end_date: u64,
     pub total_x_token: u64,
+    pub freeze_program: bool,
 }
 
 #[account]
