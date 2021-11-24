@@ -47,7 +47,7 @@ pub mod step_staking {
         Ok(())
     }
 
-    pub fn freeze_program(ctx: Context<FreezeProgram>, _nonce_staking: u8) -> ProgramResult {
+    pub fn toggle_freeze_program(ctx: Context<FreezeProgram>, _nonce_staking: u8) -> ProgramResult {
         ctx.accounts.staking_account.freeze_program = !ctx.accounts.staking_account.freeze_program;
 
         Ok(())

@@ -360,7 +360,7 @@ describe('step-staking', () => {
   });
 
   it('Freeze program for staking/unstaking', async () => {
-    await program.rpc.freezeProgram(stakingBump, {
+    await program.rpc.toggleFreezeProgram(stakingBump, {
       accounts: {
         initializer: provider.wallet.publicKey,
         stakingAccount: stakingPubkey,
