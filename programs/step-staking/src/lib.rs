@@ -234,6 +234,25 @@ pub mod step_staking {
         });
         Ok(())
     }
+
+    pub fn emit_reward(ctx: Context<EmitReward>) -> ProgramResult {
+        let total_token = ctx.accounts.token_vault.amount;
+        let total_x_token = ctx.accounts.staking_account.total_x_token;
+        let reward: u64 = (ctx.accounts.user_staking_account.x_token_amount as u128)
+            .checked_mul(total_token as u128)
+            .unwrap()
+            .checked_div(total_x_token as u128)
+            .unwrap()
+            .checked_sub(ctx.accounts.user_staking_account.amount as u128)
+            .unwrap()
+            .try_into()
+            .unwrap();
+        emit!(Reward {
+            deposit: ctx.accounts.user_staking_account.amount,
+            reward: reward,
+        });
+        Ok(())
+    }
 }
 
 const E9: u128 = 1000000000;
@@ -417,7 +436,6 @@ pub struct EmitPrice<'info> {
     pub token_mint: Box<Account<'info, Mint>>,
 
     #[account(
-        mut,
         seeds = [ token_mint.key().as_ref() ],
         bump,
     )]
@@ -428,6 +446,34 @@ pub struct EmitPrice<'info> {
         bump,
     )]
     pub staking_account: ProgramAccount<'info, StakingAccount>,
+}
+
+#[derive(Accounts)]
+pub struct EmitReward<'info> {
+    #[account(
+        address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
+    )]
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    #[account(
+        seeds = [ token_mint.key().as_ref() ],
+        bump,
+    )]
+    pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
+        bump,
+    )]
+    pub staking_account: ProgramAccount<'info, StakingAccount>,
+
+    pub token_from_authority: AccountInfo<'info>,
+
+    #[account(
+        seeds = [ token_from_authority.key().as_ref() ],
+        bump,
+    )]
+    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
 }
 
 #[account]
@@ -458,6 +504,12 @@ pub struct PriceChange {
 pub struct Price {
     pub step_per_xstep_e9: u64,
     pub step_per_xstep: String,
+}
+
+#[event]
+pub struct Reward {
+    pub deposit: u64,
+    pub reward: u64,
 }
 
 #[error]

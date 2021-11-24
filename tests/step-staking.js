@@ -193,6 +193,23 @@ describe('step-staking', () => {
     assert.strictEqual(price.stepPerXstep.toString(), '1.2');
   });
 
+  it('Emit the reward', async () => {
+    var res = await program.simulate.emitReward({
+      accounts: {
+        tokenMint: mintPubkey,
+        tokenVault: vaultPubkey,
+        stakingAccount: stakingPubkey,
+        tokenFromAuthority: provider.wallet.publicKey,
+        userStakingAccount: userStakingPubkey,
+      },
+    });
+    let reward = res.events[0].data;
+    console.log('Deposit Amount: ', reward.deposit.toString());
+    console.log('Reward Amount: ', reward.reward.toString());
+    assert.strictEqual(parseInt(reward.deposit), 5_000_000_000);
+    assert.strictEqual(parseInt(reward.reward), 1_000_000_000);
+  });
+
   it('Redeem xToken for token before lock end date', async () => {
     await assert.rejects(
       async () => {
@@ -214,11 +231,7 @@ describe('step-staking', () => {
           }
         );
       },
-      (err) => {
-        assert.strictEqual(err.code, 300);
-        assert.strictEqual(err.msg, 'Not exceed lock end date');
-        return true;
-      }
+      { code: 300, msg: 'Not exceed lock end date' }
     );
   });
 
@@ -382,10 +395,7 @@ describe('step-staking', () => {
           }
         );
       },
-      (err) => {
-        assert.strictEqual(err.code, 143);
-        return true;
-      }
+      { code: 143 }
     );
 
     await assert.rejects(
@@ -408,10 +418,7 @@ describe('step-staking', () => {
           }
         );
       },
-      (err) => {
-        assert.strictEqual(err.code, 143);
-        return true;
-      }
+      { code: 143 }
     );
   });
 });
