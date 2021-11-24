@@ -180,7 +180,7 @@ describe('step-staking', () => {
   });
 
   it('Emit the price', async () => {
-    var res = await program.simulate.emitPrice(vaultBump, stakingBump, {
+    var res = await program.simulate.emitPrice({
       accounts: {
         tokenMint: mintPubkey,
         tokenVault: vaultPubkey,
