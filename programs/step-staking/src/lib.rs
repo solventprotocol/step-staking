@@ -226,7 +226,11 @@ pub mod step_staking {
         Ok(())
     }
 
-    pub fn emit_price(ctx: Context<EmitPrice>, _nonce_staking: u8) -> ProgramResult {
+    pub fn emit_price(
+        ctx: Context<EmitPrice>,
+        _nonce_vault: u8,
+        _nonce_staking: u8,
+    ) -> ProgramResult {
         let price = get_price(&ctx.accounts.token_vault, &ctx.accounts.staking_account);
         emit!(Price {
             step_per_xstep_e9: price.0,
@@ -410,7 +414,7 @@ pub struct Unstake<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce_staking: u8)]
+#[instruction(_nonce_vault: u8, _nonce_staking: u8)]
 pub struct EmitPrice<'info> {
     #[account(
         address = constants::STEP_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
@@ -420,7 +424,7 @@ pub struct EmitPrice<'info> {
     #[account(
         mut,
         seeds = [ token_mint.key().as_ref() ],
-        bump,
+        bump = _nonce_vault,
     )]
     pub token_vault: Box<Account<'info, TokenAccount>>,
 

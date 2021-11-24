@@ -29,8 +29,6 @@ describe('step-staking', () => {
   let mintKey;
   let mintObject;
   let mintPubkey;
-  let xMintObject;
-  let xMintPubkey;
 
   //the program's vault for stored collateral against xToken minting
   let vaultPubkey;
@@ -78,23 +76,6 @@ describe('step-staking', () => {
       program.programId
     );
 
-    //this is the new xstep token
-    //test xstep token hardcoded in program, mint authority is token vault
-    rawdata = fs.readFileSync(
-      'tests/keys/xstep-TestZ4qmw6fCo1uK9oJbobWDgj1sME6hR1ssWQnyjxM.json'
-    );
-    keyData = JSON.parse(rawdata);
-    let key = anchor.web3.Keypair.fromSecretKey(new Uint8Array(keyData));
-    xMintObject = await utils.createMint(
-      key,
-      provider,
-      vaultPubkey,
-      null,
-      9,
-      TOKEN_PROGRAM_ID
-    );
-    xMintPubkey = xMintObject.publicKey;
-
     [vaultPubkey, vaultBump] = await anchor.web3.PublicKey.findProgramAddress(
       [mintPubkey.toBuffer()],
       program.programId
@@ -123,9 +104,6 @@ describe('step-staking', () => {
 
   it('Mint test tokens', async () => {
     walletTokenAccount = await mintObject.createAssociatedTokenAccount(
-      provider.wallet.publicKey
-    );
-    walletXTokenAccount = await xMintObject.createAssociatedTokenAccount(
       provider.wallet.publicKey
     );
     await utils.mintToAccount(
@@ -202,7 +180,7 @@ describe('step-staking', () => {
   });
 
   it('Emit the price', async () => {
-    var res = await program.simulate.emitPrice(stakingBump, {
+    var res = await program.simulate.emitPrice(vaultBump, stakingBump, {
       accounts: {
         tokenMint: mintPubkey,
         tokenVault: vaultPubkey,
