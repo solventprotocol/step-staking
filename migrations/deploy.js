@@ -13,27 +13,32 @@ module.exports = async function (provider) {
 
   let program = anchor.workspace.StepStaking;
 
-  let step = new anchor.web3.PublicKey("StepAscQoEioFxxWGnh2sLBDFp9d8rvKz2Yp39iDpyT");
-  let xStep = new anchor.web3.PublicKey("xStpgUCss9piqeFUk2iLVcvJEGhAdJxJQuwLkXP555G");
+  let mintPubkey = new anchor.web3.PublicKey("AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP");
 
-  [vaultPubkey, vaultBump] =
-    await anchor.web3.PublicKey.findProgramAddress(
-      [step.toBuffer()],
-      program.programId
-    );
-  
-  await program.rpc.initialize(
-    vaultBump,
-    {
-      accounts: {
-        tokenMint: step,
-        xTokenMint: xStep,
-        tokenVault: vaultPubkey,
-        initializer: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      }
-    }
-  );
+  const [vaultPubkey, vaultBump] = await anchor.web3.PublicKey.findProgramAddress(
+    [mintPubkey.toBuffer()],
+    program.programId
+  )
+
+  const [stakingPubkey, stakingBump] =
+  await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from(anchor.utils.bytes.utf8.encode('staking'))],
+    program.programId
+  )
+  console.log(vaultPubkey.toString(), vaultBump);
+  console.log(stakingPubkey.toString(), stakingBump);
+
+  const lockEndDate = new anchor.BN("1653577200")
+
+  await program.rpc.initialize(vaultBump, stakingBump, lockEndDate, {
+    accounts: {
+      tokenMint: mintPubkey,
+      tokenVault: vaultPubkey,
+      stakingAccount: stakingPubkey,
+      initializer: provider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    },
+  })
 }

@@ -1,0 +1,5 @@
+export token=AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP
+export program_id=StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x
+export program_id_keypair=
+export rpc=https://api.mainnet-beta.solana.com
+export keypair=
