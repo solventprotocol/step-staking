@@ -1,22 +1,25 @@
 <h1 align="center">
   <br>
-   <img width="400" src="https://github.com/step-finance/step-staking/blob/main/logo.svg?raw=true" alt="step logo"/>
+   <img width="100" src="https://aurory.io/content/img/header/logo.png" alt="aurory logo"/>
   <br>
 </h1>
 
 # Reward Pool
 
-Program for single token staking and receiving rewards. Ala xSushi
-
+Program for single token staking and receiving rewards. Ala xSushi. 
+Features: 
+- Stake / unstake
+- Updatable lock up date
+- Possibility to the staked amount + reward amount.
 ## Design Overview
 
-![step-staking overview](https://github.com/step-finance/step-staking/blob/main/account-design.png)
-
-*draw.io editable*
+*TODO*
 
 ## Note
 
 - **This code is unaudited. Use at your own risk.**
+- In this implementation the xTokens are stored in an ATA and not as real SPL-Token.
+
 
 ## Developing
 
