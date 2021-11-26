@@ -10,7 +10,7 @@ Program for single token staking and receiving rewards. Ala xSushi.
 Features: 
 - Stake / unstake
 - Updatable lock up date
-- Possibility to the staked amount + reward amount.
+- Possibility to display the staked amount + reward separately.
 ## Design Overview
 
 *TODO*
@@ -18,7 +18,7 @@ Features:
 ## Note
 
 - **This code is unaudited. Use at your own risk.**
-- In this implementation the xTokens are stored in an ATA and not as real SPL-Token.
+- In this implementation the xTokens are stored in an ATA.
 
 
 ## Developing
@@ -52,8 +52,6 @@ into the program you want to verify, e.g., `cd program`, and run
 anchor verify <program-id | write-buffer>
 ```
 
-A list of build artifacts can be found under [releases](https://github.com/step-finance/reward-pool/releases).
-
 ### Deploy
 
 To deploy the program, configure your CLI to the desired network/wallet and run 
@@ -78,7 +76,3 @@ anchor migrate
 This will call the `initialize` method to create the token vault. No specific calling key is needed - it can be called by anyone, and is a once only operation for PDA vault creation.  Subsequent runs will fail.
 
 Any problems in this process can be triaged in the `migrations/deploy.js` file, which is what `anchor migrate` executes.
-
-#### Set Mint Authority
-
-The mint authority of the xSTEP token must be set to the PDA vault address `ANYxxG365hutGYaTdtUQG8u2hC4dFX9mFHKuzy9ABQJi`
