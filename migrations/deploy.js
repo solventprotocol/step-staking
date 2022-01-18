@@ -13,8 +13,8 @@ module.exports = async function (provider) {
 
   let program = anchor.workspace.StepStaking;
 
-  let step = new anchor.web3.PublicKey("StepAscQoEioFxxWGnh2sLBDFp9d8rvKz2Yp39iDpyT");
-  let xStep = new anchor.web3.PublicKey("xStpgUCss9piqeFUk2iLVcvJEGhAdJxJQuwLkXP555G");
+  let step = new anchor.web3.PublicKey("sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p");
+  let xStep = new anchor.web3.PublicKey("xm8u2LQcuM9Aw4s2i3PQ8okfru6ZpAnX2bEmXxffj17");
 
   [vaultPubkey, vaultBump] =
     await anchor.web3.PublicKey.findProgramAddress(
