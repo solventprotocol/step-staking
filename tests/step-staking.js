@@ -1,7 +1,7 @@
 const anchor = require('@project-serum/anchor');
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
-const utils = require("./utils");
-const assert = require("assert");
+const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
+const utils = require('./utils');
+const assert = require('assert');
 const fs = require('fs');
 const { exit } = require('process');
 
@@ -23,7 +23,7 @@ function setProvider(p) {
   provider = p;
   anchor.setProvider(p);
   program = new anchor.Program(program.idl, program.programId, p);
-};
+}
 setProvider(provider);
 
 describe('step-staking', () => {
@@ -31,12 +31,20 @@ describe('step-staking', () => {
   let mintKey;
   let mintObject;
   let mintPubkey;
-  let xMintObject;
-  let xMintPubkey;
 
   //the program's vault for stored collateral against xToken minting
   let vaultPubkey;
   let vaultBump;
+
+  //the program's account for stored initializer key and lock end date
+  let stakingPubkey;
+  let stakingBump;
+  let lockEndDate = new anchor.BN(Date.now() / 1000 + 1000);
+  let newLockEndDate = new anchor.BN(Date.now() / 1000);
+
+  //the user's staking account for stored deposit amount
+  let userStakingPubkey;
+  let userStakingBump;
 
   it('Is initialized!', async () => {
     //setup logging event listeners
@@ -50,122 +58,231 @@ describe('step-staking', () => {
 
     //this already exists in ecosystem
     //test step token hardcoded in program, mint authority is wallet for testing
-    let rawdata = fs.readFileSync('tests/keys/step-teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9.json');
+    let rawdata = fs.readFileSync(
+      'tests/keys/step-teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9.json'
+    );
     let keyData = JSON.parse(rawdata);
     mintKey = anchor.web3.Keypair.fromSecretKey(new Uint8Array(keyData));
-    mintObject = await utils.createMint(mintKey, provider, provider.wallet.publicKey, null, 9, TOKEN_PROGRAM_ID);
+    mintObject = await utils.createMint(
+      mintKey,
+      provider,
+      provider.wallet.publicKey,
+      null,
+      9,
+      TOKEN_PROGRAM_ID
+    );
     mintPubkey = mintObject.publicKey;
 
-    [vaultPubkey, vaultBump] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [mintPubkey.toBuffer()],
-        program.programId
-      );
-
-    //this is the new xstep token
-    //test xstep token hardcoded in program, mint authority is token vault
-    rawdata = fs.readFileSync('tests/keys/xstep-TestZ4qmw6fCo1uK9oJbobWDgj1sME6hR1ssWQnyjxM.json');
-    keyData = JSON.parse(rawdata);
-    let key = anchor.web3.Keypair.fromSecretKey(new Uint8Array(keyData));
-    xMintObject = await utils.createMint(key, provider, vaultPubkey, null, 9, TOKEN_PROGRAM_ID);
-    xMintPubkey = xMintObject.publicKey;
-
-    [vaultPubkey, vaultBump] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [mintPubkey.toBuffer()],
-        program.programId
-      );
-
-    await program.rpc.initialize(
-      vaultBump,
-      {
-        accounts: {
-          tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
-          tokenVault: vaultPubkey,
-          initializer: provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
-      }
+    [vaultPubkey, vaultBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [mintPubkey.toBuffer()],
+      program.programId
     );
+
+    [vaultPubkey, vaultBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [mintPubkey.toBuffer()],
+      program.programId
+    );
+
+    [stakingPubkey, stakingBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from(anchor.utils.bytes.utf8.encode('staking'))],
+        program.programId
+      );
+
+    await program.rpc.initialize(vaultBump, stakingBump, lockEndDate, {
+      accounts: {
+        tokenMint: mintPubkey,
+        tokenVault: vaultPubkey,
+        stakingAccount: stakingPubkey,
+        initializer: provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+    });
   });
 
   let walletTokenAccount;
-  let walletXTokenAccount;
 
   it('Mint test tokens', async () => {
-    walletTokenAccount = await mintObject.createAssociatedTokenAccount(provider.wallet.publicKey);
-    walletXTokenAccount = await xMintObject.createAssociatedTokenAccount(provider.wallet.publicKey);
-    await utils.mintToAccount(provider, mintPubkey, walletTokenAccount, 100_000_000_000);
+    walletTokenAccount = await mintObject.createAssociatedTokenAccount(
+      provider.wallet.publicKey
+    );
+    await utils.mintToAccount(
+      provider,
+      mintPubkey,
+      walletTokenAccount,
+      100_000_000_000
+    );
   });
 
   it('Swap token for xToken', async () => {
+    [userStakingPubkey, userStakingBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [provider.wallet.publicKey.toBuffer()],
+        program.programId
+      );
+
     await program.rpc.stake(
       vaultBump,
+      stakingBump,
+      userStakingBump,
       new anchor.BN(5_000_000_000),
       {
         accounts: {
           tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
           tokenFrom: walletTokenAccount,
           tokenFromAuthority: provider.wallet.publicKey,
           tokenVault: vaultPubkey,
-          xTokenTo: walletXTokenAccount,
+          stakingAccount: stakingPubkey,
+          userStakingAccount: userStakingPubkey,
+          systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-        }
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
       }
     );
-    
-    assert.strictEqual(await getTokenBalance(walletTokenAccount), 95_000_000_000);
-    assert.strictEqual(await getTokenBalance(walletXTokenAccount), 5_000_000_000);
+
+    let userStakingAccount = await program.account.userStakingAccount.fetch(
+      userStakingPubkey
+    );
+    let amount = new anchor.BN(5_000_000_000);
+
+    assert.strictEqual(parseInt(userStakingAccount.amount), amount.toNumber());
+    assert.strictEqual(
+      await getTokenBalance(walletTokenAccount),
+      95_000_000_000
+    );
+    assert.strictEqual(parseInt(userStakingAccount.amount), amount.toNumber());
+    assert.strictEqual(
+      parseInt(userStakingAccount.xTokenAmount),
+      amount.toNumber()
+    );
     assert.strictEqual(await getTokenBalance(vaultPubkey), 5_000_000_000);
   });
 
   it('Airdrop some tokens to the pool', async () => {
     await utils.mintToAccount(provider, mintPubkey, vaultPubkey, 1_000_000_000);
 
-    assert.strictEqual(await getTokenBalance(walletTokenAccount), 95_000_000_000);
-    assert.strictEqual(await getTokenBalance(walletXTokenAccount), 5_000_000_000);
+    let userStakingAccount = await program.account.userStakingAccount.fetch(
+      userStakingPubkey
+    );
+    let amount = new anchor.BN(5_000_000_000);
+
+    assert.strictEqual(
+      await getTokenBalance(walletTokenAccount),
+      95_000_000_000
+    );
+    assert.strictEqual(parseInt(userStakingAccount.amount), amount.toNumber());
+    assert.strictEqual(
+      parseInt(userStakingAccount.xTokenAmount),
+      amount.toNumber()
+    );
     assert.strictEqual(await getTokenBalance(vaultPubkey), 6_000_000_000);
   });
 
   it('Emit the price', async () => {
-    var res = await program.simulate.emitPrice(
-      {
-        accounts: {
-          tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
-          tokenVault: vaultPubkey,
-        }
-      }
-    )
+    var res = await program.simulate.emitPrice({
+      accounts: {
+        tokenMint: mintPubkey,
+        tokenVault: vaultPubkey,
+        stakingAccount: stakingPubkey,
+      },
+    });
     let price = res.events[0].data;
     console.log('Emit price: ', price.stepPerXstepE9.toString());
     console.log('Emit price: ', price.stepPerXstep.toString());
     assert.strictEqual(price.stepPerXstep.toString(), '1.2');
   });
 
+  it('Emit the reward', async () => {
+    var res = await program.simulate.emitReward({
+      accounts: {
+        tokenMint: mintPubkey,
+        tokenVault: vaultPubkey,
+        stakingAccount: stakingPubkey,
+        tokenFromAuthority: provider.wallet.publicKey,
+        userStakingAccount: userStakingPubkey,
+      },
+    });
+    let reward = res.events[0].data;
+    console.log('Deposit Amount: ', reward.deposit.toString());
+    console.log('Reward Amount: ', reward.reward.toString());
+    assert.strictEqual(parseInt(reward.deposit), 5_000_000_000);
+    assert.strictEqual(parseInt(reward.reward), 1_000_000_000);
+  });
+
+  it('Redeem xToken for token before lock end date', async () => {
+    await assert.rejects(
+      async () => {
+        await program.rpc.unstake(
+          vaultBump,
+          stakingBump,
+          userStakingBump,
+          new anchor.BN(5_000_000_000),
+          {
+            accounts: {
+              tokenMint: mintPubkey,
+              xTokenFromAuthority: provider.wallet.publicKey,
+              tokenVault: vaultPubkey,
+              stakingAccount: stakingPubkey,
+              userStakingAccount: userStakingPubkey,
+              tokenTo: walletTokenAccount,
+              tokenProgram: TOKEN_PROGRAM_ID,
+            },
+          }
+        );
+      },
+      { code: 300, msg: 'Not exceed lock end date' }
+    );
+  });
+
+  it('Update lock end date', async () => {
+    await program.rpc.updateLockEndDate(stakingBump, newLockEndDate, {
+      accounts: {
+        initializer: provider.wallet.publicKey,
+        stakingAccount: stakingPubkey,
+      },
+    });
+
+    let stakingAccount = await program.account.stakingAccount.fetch(
+      stakingPubkey
+    );
+    assert.strictEqual(
+      parseInt(stakingAccount.lockEndDate),
+      newLockEndDate.toNumber()
+    );
+  });
+
   it('Redeem xToken for token', async () => {
     await program.rpc.unstake(
       vaultBump,
+      stakingBump,
+      userStakingBump,
       new anchor.BN(5_000_000_000),
       {
         accounts: {
           tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
-          xTokenFrom: walletXTokenAccount,
           xTokenFromAuthority: provider.wallet.publicKey,
           tokenVault: vaultPubkey,
+          stakingAccount: stakingPubkey,
+          userStakingAccount: userStakingPubkey,
           tokenTo: walletTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
-        }
+        },
       }
     );
 
-    assert.strictEqual(await getTokenBalance(walletTokenAccount), 101_000_000_000);
-    assert.strictEqual(await getTokenBalance(walletXTokenAccount), 0);
+    let userStakingAccount = await program.account.userStakingAccount.fetch(
+      userStakingPubkey
+    );
+
+    assert.strictEqual(
+      await getTokenBalance(walletTokenAccount),
+      101_000_000_000
+    );
+    assert.strictEqual(parseInt(userStakingAccount.amount), 0);
+    assert.strictEqual(parseInt(userStakingAccount.xTokenAmount), 0);
     assert.strictEqual(await getTokenBalance(vaultPubkey), 0);
   });
 
@@ -178,53 +295,138 @@ describe('step-staking', () => {
   it('Swap token for xToken on prefilled pool', async () => {
     await program.rpc.stake(
       vaultBump,
+      stakingBump,
+      userStakingBump,
       new anchor.BN(5_000_000_000),
       {
         accounts: {
           tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
           tokenFrom: walletTokenAccount,
           tokenFromAuthority: provider.wallet.publicKey,
           tokenVault: vaultPubkey,
-          xTokenTo: walletXTokenAccount,
+          stakingAccount: stakingPubkey,
+          userStakingAccount: userStakingPubkey,
+          systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-        }
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
       }
     );
-    
-    assert.strictEqual(await getTokenBalance(walletTokenAccount), 96_000_000_000);
-    assert.strictEqual(await getTokenBalance(walletXTokenAccount), 5_000_000_000);
+
+    let userStakingAccount = await program.account.userStakingAccount.fetch(
+      userStakingPubkey
+    );
+    let amount = new anchor.BN(5_000_000_000);
+
+    assert.strictEqual(
+      await getTokenBalance(walletTokenAccount),
+      96_000_000_000
+    );
+    assert.strictEqual(parseInt(userStakingAccount.amount), amount.toNumber());
+    assert.strictEqual(
+      parseInt(userStakingAccount.xTokenAmount),
+      amount.toNumber()
+    );
     assert.strictEqual(await getTokenBalance(vaultPubkey), 10_000_000_000);
   });
 
   it('Redeem xToken for token after prefilled pool', async () => {
     await program.rpc.unstake(
       vaultBump,
+      stakingBump,
+      userStakingBump,
       new anchor.BN(5_000_000_000),
       {
         accounts: {
           tokenMint: mintPubkey,
-          xTokenMint: xMintPubkey,
-          xTokenFrom: walletXTokenAccount,
           xTokenFromAuthority: provider.wallet.publicKey,
           tokenVault: vaultPubkey,
+          stakingAccount: stakingPubkey,
+          userStakingAccount: userStakingPubkey,
           tokenTo: walletTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
-        }
+        },
       }
     );
 
-    assert.strictEqual(await getTokenBalance(walletTokenAccount), 106_000_000_000);
-    assert.strictEqual(await getTokenBalance(walletXTokenAccount), 0);
-    assert.strictEqual(await getTokenBalance(vaultPubkey), 0);
+    let userStakingAccount = await program.account.userStakingAccount.fetch(
+      userStakingPubkey
+    );
+
+    assert.strictEqual(
+      await getTokenBalance(walletTokenAccount),
+      106_000_000_000
+    );
+    assert.strictEqual(parseInt(userStakingAccount.amount), 0);
+    assert.strictEqual(parseInt(userStakingAccount.xTokenAmount), 0);
   });
 
-  return;
+  it('Freeze program for staking/unstaking', async () => {
+    await program.rpc.toggleFreezeProgram(stakingBump, {
+      accounts: {
+        initializer: provider.wallet.publicKey,
+        stakingAccount: stakingPubkey,
+      },
+    });
 
+    let stakingAccount = await program.account.stakingAccount.fetch(
+      stakingPubkey
+    );
+
+    assert.strictEqual(stakingAccount.freezeProgram, true);
+
+    await assert.rejects(
+      async () => {
+        await program.rpc.stake(
+          vaultBump,
+          stakingBump,
+          userStakingBump,
+          new anchor.BN(5_000_000_000),
+          {
+            accounts: {
+              tokenMint: mintPubkey,
+              tokenFrom: walletTokenAccount,
+              tokenFromAuthority: provider.wallet.publicKey,
+              tokenVault: vaultPubkey,
+              stakingAccount: stakingPubkey,
+              userStakingAccount: userStakingPubkey,
+              systemProgram: anchor.web3.SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            },
+          }
+        );
+      },
+      { code: 143 }
+    );
+
+    await assert.rejects(
+      async () => {
+        await program.rpc.unstake(
+          vaultBump,
+          stakingBump,
+          userStakingBump,
+          new anchor.BN(5_000_000_000),
+          {
+            accounts: {
+              tokenMint: mintPubkey,
+              xTokenFromAuthority: provider.wallet.publicKey,
+              tokenVault: vaultPubkey,
+              stakingAccount: stakingPubkey,
+              userStakingAccount: userStakingPubkey,
+              tokenTo: walletTokenAccount,
+              tokenProgram: TOKEN_PROGRAM_ID,
+            },
+          }
+        );
+      },
+      { code: 143 }
+    );
+  });
 });
 
-// exit(0);
-
 async function getTokenBalance(pubkey) {
-  return parseInt((await provider.connection.getTokenAccountBalance(pubkey)).value.amount);
+  return parseInt(
+    (await provider.connection.getTokenAccountBalance(pubkey)).value.amount
+  );
 }

@@ -1,22 +1,25 @@
 <h1 align="center">
   <br>
-   <img width="400" src="https://github.com/step-finance/step-staking/blob/main/logo.svg?raw=true" alt="step logo"/>
+   <img width="100" src="https://aurory.io/content/img/header/logo.png" alt="aurory logo"/>
   <br>
 </h1>
 
 # Reward Pool
 
-Program for single token staking and receiving rewards. Ala xSushi
-
+Program for single token staking and receiving rewards. Ala xSushi. 
+Features: 
+- Stake / unstake
+- Updatable lock up date
+- Possibility to display the staked amount + reward separately.
 ## Design Overview
 
-![step-staking overview](https://github.com/step-finance/step-staking/blob/main/account-design.png)
-
-*draw.io editable*
+*TODO*
 
 ## Note
 
 - **This code is unaudited. Use at your own risk.**
+- In this implementation the xTokens are stored in an ATA.
+
 
 ## Developing
 
@@ -49,8 +52,6 @@ into the program you want to verify, e.g., `cd program`, and run
 anchor verify <program-id | write-buffer>
 ```
 
-A list of build artifacts can be found under [releases](https://github.com/step-finance/reward-pool/releases).
-
 ### Deploy
 
 To deploy the program, configure your CLI to the desired network/wallet and run 
@@ -75,7 +76,3 @@ anchor migrate
 This will call the `initialize` method to create the token vault. No specific calling key is needed - it can be called by anyone, and is a once only operation for PDA vault creation.  Subsequent runs will fail.
 
 Any problems in this process can be triaged in the `migrations/deploy.js` file, which is what `anchor migrate` executes.
-
-#### Set Mint Authority
-
-The mint authority of the xSTEP token must be set to the PDA vault address `ANYxxG365hutGYaTdtUQG8u2hC4dFX9mFHKuzy9ABQJi`
