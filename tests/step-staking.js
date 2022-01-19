@@ -7,6 +7,7 @@ const { exit } = require('process');
 
 let program = anchor.workspace.StepStaking;
 
+
 //Read the provider from the configured environmnet.
 //represents an outside actor
 //owns mints out of any other actors control, provides initial $$ to others
@@ -222,7 +223,7 @@ describe('step-staking', () => {
 
 });
 
-exit(0);
+// exit(0);
 
 async function getTokenBalance(pubkey) {
   return parseInt((await provider.connection.getTokenAccountBalance(pubkey)).value.amount);

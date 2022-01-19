@@ -7,8 +7,12 @@ members = ["programs/step-staking"]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+wallet = "~/.config/solana/devnet.json"
+
+# [provider]
+# cluster = "localnet"
+# wallet = "~/.config/solana/devnet.json"
 
 [scripts]
 test = "mocha -t 1000000 tests/"
@@ -17,7 +21,7 @@ test = "mocha -t 1000000 tests/"
 step_staking = "TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg"
 
 [programs.devnet]
-step_staking = "Stk5NCWomVN3itaFjLu382u9ibb5jMSHEsh6CuhaGjB"
+step_staking = "AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw"
 
 [programs.testnet]
 step_staking = "Stk5NCWomVN3itaFjLu382u9ibb5jMSHEsh6CuhaGjB"

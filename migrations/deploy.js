@@ -11,7 +11,15 @@ module.exports = async function (provider) {
   // Configure client to use the provider.
   anchor.setProvider(provider);
 
-  let program = anchor.workspace.StepStaking;
+  // Read the generated IDL.
+  const idl = JSON.parse(
+    require("fs").readFileSync("../target/idl/step_staking.json", "utf8")
+  );
+
+  // Address of the deployed program.
+  const programId = new anchor.web3.PublicKey("AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw");
+
+  const program = new anchor.Program(idl, programId);
 
   let step = new anchor.web3.PublicKey("sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p");
   let xStep = new anchor.web3.PublicKey("xm8u2LQcuM9Aw4s2i3PQ8okfru6ZpAnX2bEmXxffj17");
