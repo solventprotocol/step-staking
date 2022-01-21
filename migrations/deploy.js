@@ -17,12 +17,12 @@ module.exports = async function (provider) {
   );
 
   // Address of the deployed program.
-  const programId = new anchor.web3.PublicKey("AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw");
+  const programId = new anchor.web3.PublicKey("souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS");
 
   const program = new anchor.Program(idl, programId);
 
-  let step = new anchor.web3.PublicKey("sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p");
-  let xStep = new anchor.web3.PublicKey("xm8u2LQcuM9Aw4s2i3PQ8okfru6ZpAnX2bEmXxffj17");
+  let step = new anchor.web3.PublicKey("svtMpL5eQzdmB3uqK9NXaQkq8prGZoKQFNVJghdWCkV");
+  let xStep = new anchor.web3.PublicKey("xsvtzXdo6tMD59k6NnYmRTi4ZduEoUSvSb6Keny73sr");
 
   [vaultPubkey, vaultBump] =
     await anchor.web3.PublicKey.findProgramAddress(

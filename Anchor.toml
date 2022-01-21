@@ -7,7 +7,7 @@ members = ["programs/step-staking"]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+cluster = "https://ssc-dao.genesysgo.net/"
 wallet = "~/.config/solana/devnet.json"
 
 # [provider]
@@ -21,7 +21,7 @@ test = "mocha -t 1000000 tests/"
 step_staking = "TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg"
 
 [programs.devnet]
-step_staking = "AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw"
+step_staking = "souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS"
 
 [programs.testnet]
 step_staking = "Stk5NCWomVN3itaFjLu382u9ibb5jMSHEsh6CuhaGjB"

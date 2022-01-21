@@ -6,14 +6,14 @@ use spl_token::instruction::AuthorityType;
 use std::convert::TryInto;
 
 // #[cfg(not(feature = "test-id"))]
-declare_id!("AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw");
+declare_id!("souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS");
 // #[cfg(feature = "test-id")]
 // declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
 
 // #[cfg(not(feature = "local-testing"))]
 pub mod constants {
-    pub const STEP_TOKEN_MINT_PUBKEY: &str = "sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p";
-    pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "xm8u2LQcuM9Aw4s2i3PQ8okfru6ZpAnX2bEmXxffj17";
+    pub const STEP_TOKEN_MINT_PUBKEY: &str = "svtMpL5eQzdmB3uqK9NXaQkq8prGZoKQFNVJghdWCkV";
+    pub const X_STEP_TOKEN_MINT_PUBKEY: &str = "xsvtzXdo6tMD59k6NnYmRTi4ZduEoUSvSb6Keny73sr";
 }
 
 // #[cfg(feature = "local-testing")]
