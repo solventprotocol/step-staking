@@ -7,7 +7,7 @@ members = ["programs/step-staking"]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+cluster = "https://winter-rough-firefly.solana-devnet.quiknode.pro/e0ac6a72149594cf8e7b4979320bafdaa59d6f3c/"
 wallet = "~/.config/solana/devnet.json"
 
 # [provider]
@@ -21,7 +21,7 @@ test = "mocha -t 1000000 tests/"
 step_staking = "TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg"
 
 [programs.devnet]
-step_staking = "StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x"
+step_staking = "G82zGkUneM2TbqAbAsrXVkSdiw8tespixt9w8PWnCkpp"
 
 [programs.testnet]
 step_staking = "StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x"

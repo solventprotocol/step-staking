@@ -17,11 +17,11 @@ module.exports = async function (provider) {
   );
 
   // Address of the deployed program.
-  const programId = new anchor.web3.PublicKey("AbPttz1A9hPVX6Cf4oGJeFrn7snD4BbqPT1ZsTbsyCMw");
+  const programId = new anchor.web3.PublicKey("G82zGkUneM2TbqAbAsrXVkSdiw8tespixt9w8PWnCkpp");
 
   const program = new anchor.Program(idl, programId);
 
-  let mintPubkey = new anchor.web3.PublicKey("AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP");
+  let mintPubkey = new anchor.web3.PublicKey("sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p");
 
   const [vaultPubkey, vaultBump] = await anchor.web3.PublicKey.findProgramAddress(
     [mintPubkey.toBuffer()],
@@ -36,7 +36,7 @@ module.exports = async function (provider) {
   console.log(vaultPubkey.toString(), vaultBump);
   console.log(stakingPubkey.toString(), stakingBump);
 
-  const lockEndDate = new anchor.BN("1653577200")
+  const lockEndDate = new anchor.BN("1642597800")
 
   await program.rpc.initialize(vaultBump, stakingBump, lockEndDate, {
     accounts: {

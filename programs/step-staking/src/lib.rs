@@ -4,22 +4,22 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::convert::TryInto;
 
-#[cfg(not(feature = "local-testing"))]
-declare_id!("StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x");
-#[cfg(feature = "local-testing")]
-declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
+// #[cfg(not(feature = "local-testing"))]
+declare_id!("G82zGkUneM2TbqAbAsrXVkSdiw8tespixt9w8PWnCkpp");
+// #[cfg(feature = "local-testing")]
+// declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
 
 // #[cfg(not(feature = "local-testing"))]
 pub mod constants {
-    pub const STEP_TOKEN_MINT_PUBKEY: &str = "AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP";
+    pub const STEP_TOKEN_MINT_PUBKEY: &str = "sadZFDZYyS76eQBX5VkXWpDw5NrrNuddrdidUCd4p6p";
     pub const STAKING_PDA_SEED: &[u8] = b"staking";
 }
 
-#[cfg(feature = "local-testing")]
-pub mod constants {
-    pub const STEP_TOKEN_MINT_PUBKEY: &str = "teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9";
-    pub const STAKING_PDA_SEED: &[u8] = b"staking";
-}
+// #[cfg(feature = "local-testing")]
+// pub mod constants {
+//     pub const STEP_TOKEN_MINT_PUBKEY: &str = "teST1ieLrLdr4MJPZ7i8mgSCLQ7rTrPRjNnyFdHFaz9";
+//     pub const STAKING_PDA_SEED: &[u8] = b"staking";
+// }
 
 #[program]
 pub mod step_staking {
@@ -259,7 +259,7 @@ const E9: u128 = 1000000000;
 
 pub fn get_price<'info>(
     vault: &Account<'info, TokenAccount>,
-    staking: &ProgramAccount<'info, StakingAccount>,
+    staking: &Account<'info, StakingAccount>,
 ) -> (u64, String) {
     let total_token = vault.amount;
     let total_x_token = staking.total_x_token;
@@ -304,7 +304,7 @@ pub struct Initialize<'info> {
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
         bump = _nonce_staking,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 
     #[account(mut)]
     ///pays rent on the initializing accounts
@@ -327,7 +327,7 @@ pub struct UpdateLockEndDate<'info> {
         bump = _nonce_staking,
         constraint = staking_account.initializer_key == *initializer.key,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 }
 
 #[derive(Accounts)]
@@ -341,7 +341,7 @@ pub struct FreezeProgram<'info> {
         bump = _nonce_staking,
         constraint = staking_account.initializer_key == *initializer.key,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 }
 
 #[derive(Accounts)]
@@ -372,7 +372,7 @@ pub struct Stake<'info> {
         bump = _nonce_staking,
         constraint = !staking_account.freeze_program,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 
     #[account(
         init_if_needed,
@@ -380,7 +380,7 @@ pub struct Stake<'info> {
         seeds = [ token_from_authority.key().as_ref() ],
         bump = _nonce_user_staking,
     )]
-    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
+    pub user_staking_account: Account<'info, UserStakingAccount>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -411,7 +411,7 @@ pub struct Unstake<'info> {
         bump = _nonce_staking,
         constraint = !staking_account.freeze_program,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 
     #[account(
         mut,
@@ -419,7 +419,7 @@ pub struct Unstake<'info> {
         bump = _nonce_user_staking,
         constraint = user_staking_account.x_token_amount >= amount
     )]
-    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
+    pub user_staking_account: Account<'info, UserStakingAccount>,
 
     #[account(mut)]
     //the token account to send token
@@ -445,7 +445,7 @@ pub struct EmitPrice<'info> {
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
         bump,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 }
 
 #[derive(Accounts)]
@@ -465,7 +465,7 @@ pub struct EmitReward<'info> {
         seeds = [ constants::STAKING_PDA_SEED.as_ref() ],
         bump,
     )]
-    pub staking_account: ProgramAccount<'info, StakingAccount>,
+    pub staking_account: Account<'info, StakingAccount>,
 
     pub token_from_authority: AccountInfo<'info>,
 
@@ -473,7 +473,7 @@ pub struct EmitReward<'info> {
         seeds = [ token_from_authority.key().as_ref() ],
         bump,
     )]
-    pub user_staking_account: ProgramAccount<'info, UserStakingAccount>,
+    pub user_staking_account: Account<'info, UserStakingAccount>,
 }
 
 #[account]
