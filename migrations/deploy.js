@@ -17,7 +17,7 @@ module.exports = async function (provider) {
   );
 
   // Address of the deployed program.
-  const programId = new anchor.web3.PublicKey("souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS");
+  const programId = new anchor.web3.PublicKey("BtEqZg3VwQcCFfsP7cAKvXmD8VnCckuR3QFof45BNzjJ");
 
   const program = new anchor.Program(idl, programId);
 
@@ -29,6 +29,9 @@ module.exports = async function (provider) {
       [step.toBuffer()],
       program.programId
     );
+
+  console.log("vaultPubkey: ", vaultPubkey.toString());
+  console.log("vaultBump: ", vaultBump);
   
   await program.rpc.initialize(
     vaultBump,

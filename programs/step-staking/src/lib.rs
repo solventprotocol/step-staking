@@ -6,7 +6,7 @@ use spl_token::instruction::AuthorityType;
 use std::convert::TryInto;
 
 // #[cfg(not(feature = "test-id"))]
-declare_id!("souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS");
+declare_id!("BtEqZg3VwQcCFfsP7cAKvXmD8VnCckuR3QFof45BNzjJ");
 // #[cfg(feature = "test-id")]
 // declare_id!("TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg");
 

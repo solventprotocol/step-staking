@@ -1,4 +1,4 @@
-anchor_version = "0.19.0"
+anchor_version = "0.20.1"
 
 [workspace]
 members = ["programs/step-staking"]
@@ -8,7 +8,7 @@ url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "https://ssc-dao.genesysgo.net/"
-wallet = "~/.config/solana/devnet.json"
+wallet = "~/.config/solana/mainnet.json"
 
 # [provider]
 # cluster = "localnet"
@@ -21,10 +21,10 @@ test = "mocha -t 1000000 tests/"
 step_staking = "TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg"
 
 [programs.devnet]
-step_staking = "souepX2w5hYSaN62zpgbmpcdfTwcVQoySkCG1jgoQrS"
+step_staking = "BtEqZg3VwQcCFfsP7cAKvXmD8VnCckuR3QFof45BNzjJ"
 
 [programs.testnet]
 step_staking = "Stk5NCWomVN3itaFjLu382u9ibb5jMSHEsh6CuhaGjB"
 
 [programs.mainnet]
-step_staking = "Stk5NCWomVN3itaFjLu382u9ibb5jMSHEsh6CuhaGjB"
+step_staking = "BtEqZg3VwQcCFfsP7cAKvXmD8VnCckuR3QFof45BNzjJ"
