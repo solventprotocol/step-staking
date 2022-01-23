@@ -7,8 +7,8 @@ members = ["programs/step-staking"]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "https://winter-rough-firefly.solana-devnet.quiknode.pro/e0ac6a72149594cf8e7b4979320bafdaa59d6f3c/"
-wallet = "~/.config/solana/devnet.json"
+cluster = "https://ssc-dao.genesysgo.net/"
+wallet = "~/.config/solana/mainnet.json"
 
 # [provider]
 # cluster = "localnet"
@@ -18,13 +18,13 @@ wallet = "~/.config/solana/devnet.json"
 test = "mocha -t 1000000 tests/"
 
 [programs.localnet]
-step_staking = "TesT35sGptoswsVkcLpUUe6U2iTJZE59on1Jno8Vdpg"
+step_staking = "AbntkGcaYc5RuAzyomxY5sEmvkpd87DeDKh2FVuQm4pU"
 
 [programs.devnet]
-step_staking = "G82zGkUneM2TbqAbAsrXVkSdiw8tespixt9w8PWnCkpp"
+step_staking = "AbntkGcaYc5RuAzyomxY5sEmvkpd87DeDKh2FVuQm4pU"
 
 [programs.testnet]
-step_staking = "StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x"
+step_staking = "AbntkGcaYc5RuAzyomxY5sEmvkpd87DeDKh2FVuQm4pU"
 
 [programs.mainnet]
-step_staking = "StKLLTf7CQ9n5BgXPSDXENovLTCuNc7N2ehvTb6JZ5x"
+step_staking = "AbntkGcaYc5RuAzyomxY5sEmvkpd87DeDKh2FVuQm4pU"
