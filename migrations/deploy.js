@@ -36,7 +36,7 @@ module.exports = async function (provider) {
   console.log(vaultPubkey.toString(), vaultBump);
   console.log(stakingPubkey.toString(), stakingBump);
 
-  const lockEndDate = new anchor.BN("1642597800")
+  const lockEndDate = new anchor.BN("1642933205")
 
   await program.rpc.initialize(vaultBump, stakingBump, lockEndDate, {
     accounts: {
@@ -48,5 +48,16 @@ module.exports = async function (provider) {
       tokenProgram: TOKEN_PROGRAM_ID,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     },
-  })
+  });
+
+  // Uncomment below to call updateLockEndDate
+
+  // const newLockEndDate = new anchor.BN("1648742400")
+
+  // await program.rpc.updateLockEndDate(stakingBump, newLockEndDate, {
+  //   accounts: {
+  //     initializer: provider.wallet.publicKey,
+  //     stakingAccount: stakingPubkey,
+  //   },
+  // });
 }
